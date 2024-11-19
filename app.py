@@ -6,6 +6,25 @@ from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.prompts import PromptTemplate
 import os
 
+from langchain.callbacks import FileCallbackHandler
+
+# Create a callback class that captures intermediate thoughts, actions, and observations
+class CaptureIntermediateStepsCallback(FileCallbackHandler):
+    def __init__(self):
+        self.steps = []
+
+    def on_tool_start(self, tool_name, tool_input, **kwargs):
+        self.steps.append({"thought": f"Using tool: {tool_name}", "action_input": tool_input})
+
+    def on_tool_end(self, tool_output, **kwargs):
+        self.steps[-1]["observation"] = tool_output
+
+    def on_thought(self, thought, **kwargs):
+        self.steps.append({"thought": thought})
+
+    def get_steps(self):
+        return self.steps
+
 app = Flask(__name__)
 
 llm = ChatOpenAI(model_name="gpt-4o-mini")
@@ -52,21 +71,26 @@ def query_agent():
         return jsonify({"error": "No query provided"}), 400
 
     try:
-        # Execute the agent and capture the detailed reasoning
-        result = agent_executor.invoke({"input": query})
-        print(result)
-        final_answer = result['output']
-        # detailed_reasoning = result['intermediate_steps']
+        callback = CaptureIntermediateStepsCallback()
+        agent_executor.invoke({"input": query}, callbacks=[callback])
 
-        # # Format the detailed reasoning for display
-        # detailed_reasoning_str = "\n".join(
-        #     f"Thought: {step['thought']}\nAction: {step['action']}\nAction Input: {step['action_input']}\nObservation: {step['observation']}\n"
-        #     for step in detailed_reasoning
-        # )
+
+        # Execute the agent and capture the detailed reasoning
+        final_answer = agent_executor.invoke({"input": query})['output']
+        detailed_reasoning = callback.get_steps()
+        print("test")
+        print(detailed_reasoning)
+
+        # Format the detailed reasoning for display
+        detailed_reasoning_str = "\n".join(
+            f"Thought: {step.get('thought', '')}\nAction: {step.get('action', '')}\nAction Input: {step.get('action_input', '')}\nObservation: {step.get('observation', '')}\n"
+            for step in detailed_reasoning
+        )
+        print(detailed_reasoning_str)
 
         return jsonify({
-            "response": final_answer#,
-            #"details": detailed_reasoning_str
+            "response": final_answer,
+            "details": detailed_reasoning_str
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

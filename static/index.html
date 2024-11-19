@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReAct Agent Interface</title>
+    <title>Ask the ReAct Agent</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +14,7 @@
             padding: 10px;
             border: 1px solid #ddd;
             background-color: #f9f9f9;
-            white-space: pre-wrap; /* Preserve formatting */
+            white-space: pre-wrap; /* Preserves formatting */
         }
         button {
             padding: 8px 15px;
@@ -62,6 +62,7 @@
                     document.getElementById('response').innerText = `Error: ${data.error}`;
                 } else {
                     document.getElementById('response').innerText = `Final Answer: ${data.response}`;
+                    document.getElementById('details').innerText = `Detailed Reasoning:\n${data.details}`;
                 }
             } catch (error) {
                 document.getElementById('response').innerText = `Error: ${error.message}`;
